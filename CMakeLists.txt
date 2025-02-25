@@ -4,3 +4,4 @@ project(OperatingSystem C)
 set(CMAKE_C_STANDARD 99)
 
 add_subdirectory(Lesson01)
+add_subdirectory(Lesson02)
