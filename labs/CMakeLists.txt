@@ -1,0 +1,1 @@
+add_subdirectory(os2025)
