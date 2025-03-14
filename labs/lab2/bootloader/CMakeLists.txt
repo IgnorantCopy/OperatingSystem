@@ -1,0 +1,1 @@
+add_executable(lab2_bootloader_boot boot.c boot.h)
