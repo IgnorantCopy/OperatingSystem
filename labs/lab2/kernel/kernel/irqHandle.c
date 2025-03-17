@@ -4,7 +4,7 @@
 extern int displayRow;
 extern int displayCol;
 
-extern uint32_t keyBuffer[MAX_KEYBUFFER_SIZE];
+extern char keyBuffer[MAX_KEYBUFFER_SIZE];
 extern int bufferHead;
 extern int bufferTail;
 
@@ -34,6 +34,12 @@ void updateNewCharacter() {
     if (displayCol == 80) {
         updateNewLine();
     }
+}
+
+void displayCharacter(char c, int row, int col) {
+    int pos = (row * 80 + col) * 2;
+    uint16_t data = c | (0x0c << 8);
+    asm volatile("movw %0, (%1)"::"r"(data), "r"(0xb8000 + pos));
 }
 
 void irqHandle(struct TrapFrame *tf) { // pointer tf = esp
@@ -71,41 +77,37 @@ void KeyboardHandle(struct TrapFrame *tf){
 	uint32_t code = getKeyCode();
 	if(code == 0xe){ // 退格符
 		// TODO: 要求只能退格用户键盘输入的字符串，且最多退到当行行首
-        if (displayCol > 0) {
+        if (displayCol > 0 && bufferHead != bufferTail) {
+            keyBuffer[bufferHead] = 0;
+            bufferHead = (bufferHead - 1 + MAX_KEYBUFFER_SIZE) % MAX_KEYBUFFER_SIZE;
+            displayCharacter(0, displayRow, displayCol);
             displayCol--;
-            int offset = 0;
-            for (; displayCol + offset < 80; offset++) {
-                int pos = (bufferHead + offset) % MAX_KEYBUFFER_SIZE;
-                if (pos == bufferTail) {
-                    break;
-                }
-                uint32_t c = keyBuffer[(pos + 1) % MAX_KEYBUFFER_SIZE];
-                if (c == 0x1c) {
-                    break;
-                }
-                keyBuffer[pos] = c;
-            }
-            keyBuffer[(bufferHead + offset) % MAX_KEYBUFFER_SIZE] = 0;
+        } else if (displayCol == 0 && bufferHead != bufferTail) {
+            keyBuffer[bufferHead] = 0;
+            bufferHead = (bufferHead - 1 + MAX_KEYBUFFER_SIZE) % MAX_KEYBUFFER_SIZE;
+            displayCharacter(0, displayRow, displayCol);
         }
 	}else if(code == 0x1c){ // 回车符
 		// TODO: 处理回车情况
         updateNewLine();
-        keyBuffer[bufferHead] = 0x1c;
+        keyBuffer[bufferHead] = '\n';
+        bufferHead = (bufferHead + 1) % MAX_KEYBUFFER_SIZE;
         if (bufferHead == bufferTail) {
             bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
         }
-        bufferHead = (bufferHead + 1) % MAX_KEYBUFFER_SIZE;
-	}else if(code < 0x81){ // 正常字符
+    }else if(code < 0x81){ // 正常字符
 		// TODO: 注意输入的大小写的实现、不可打印字符的处理
-        if (getChar(code) == 0) {
+        char c = getChar(code);
+        if (c == 0) {
             return;
         }
+        displayCharacter(c, displayRow, displayCol);
         updateNewCharacter();
-        keyBuffer[bufferHead] = code;
+        keyBuffer[bufferHead] = c;
+        bufferHead = (bufferHead + 1) % MAX_KEYBUFFER_SIZE;
         if (bufferHead == bufferTail) {
             bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
         }
-        bufferHead = (bufferHead + 1) % MAX_KEYBUFFER_SIZE;
 	}
 	updateCursor(displayRow, displayCol);
 }
@@ -136,23 +138,20 @@ void syscallPrint(struct TrapFrame *tf) {
 	char *str = (char*)tf->edx;
 	int size = tf->ebx;
 	int i = 0;
-	int pos = 0;
+//	int pos = 0;
 	char character = 0;
-	uint16_t data = 0;
+//	uint16_t data = 0;
 	asm volatile("movw %0, %%es"::"m"(sel));
 	for (i = 0; i < size; i++) {
-		asm volatile("movb %%es:(%1), %0":"=r"(character):"r"(str+i));
-		// TODO: 完成光标的维护和打印到显存
+        asm volatile("movb %%es:(%1), %0":"=r"(character):"r"(str + i));
+        // TODO: 完成光标的维护和打印到显存
         if (character == '\n') {
             updateNewLine();
         } else {
-            data = character | (0x0c << 8);
-            pos = (displayRow * 80 + displayCol) * 2;
-            asm volatile("movw %0, (%1)"::"r"(data), "r"(0xb8000 + pos));
             updateNewCharacter();
+            displayCharacter(character, displayRow, displayCol);
         }
-	}
-	
+    }
 	updateCursor(displayRow, displayCol);
 }
 
@@ -173,8 +172,13 @@ void syscallGetChar(struct TrapFrame *tf){
     if (bufferHead == bufferTail) {
         tf->eax = -1;
     } else {
-        tf->eax = keyBuffer[bufferHead];
-        bufferHead = (bufferHead + 1) % MAX_KEYBUFFER_SIZE;
+        int sel = USEL(SEG_UDATA);
+        char *c = (char*)tf->edx;
+        asm volatile("movw %0, %%es"::"m"(sel));
+        asm volatile("movb %0, %%es:(%1)"::"r"(keyBuffer[bufferTail]), "r"(c));
+        keyBuffer[bufferTail] = 0;
+        bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
+        tf->eax = 0;
     }
 }
 
@@ -185,17 +189,34 @@ void syscallGetStr(struct TrapFrame *tf){
     int size = tf->ebx;
     int i = 0;
     char character = 0;
+    int isEnd = 0;
     asm volatile("movw %0, %%es"::"m"(sel));
-    for (; i < size - 1; i++) {
+    while (i < size - 1) {
         if (bufferHead == bufferTail) {
             break;
         }
-        character = keyBuffer[bufferHead];
-        if (character == 0x1c) {
+        character = keyBuffer[bufferTail + i];
+        if (character == '\n') {
+            while (bufferTail != bufferHead) {
+                keyBuffer[bufferTail] = 0;
+                bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
+            }
+            isEnd = 1;
+            break;
+        } else if (character != 0) {
+            asm volatile("movb %0, %%es:(%1)"::"r"(character), "r"(str + i));
+            i++;
+        } else {
             break;
         }
-        str[i] = character;
-        bufferHead = (bufferHead + 1) % MAX_KEYBUFFER_SIZE;
     }
-    str[i] = 0;
+    if (i == size - 1) {
+        while (bufferTail != bufferHead) {
+            keyBuffer[bufferTail] = 0;
+            bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
+        }
+        isEnd = 1;
+    }
+    asm volatile("movb $0, %%es:(%0)"::"r"(str + i));
+    tf->eax = isEnd ? i : -1;
 }

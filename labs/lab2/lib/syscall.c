@@ -57,22 +57,14 @@ int32_t syscall(int num, uint32_t a1,uint32_t a2,
 
 char getChar(){ // 对应SYS_READ STD_IN
 	// TODO: 实现getChar函数，方式不限
-    char c;
-    syscall(SYS_READ, STD_IN, (uint32_t)&c, 1, 0, 0);
+    char c = 0;
+    while (syscall(SYS_READ, STD_IN, (uint32_t)&c, 1, 0, 0) == -1);
     return c;
 }
 
 void getStr(char *str, int size){ // 对应SYS_READ STD_STR
 	// TODO: 实现getStr函数，方式不限
-    int i = 0;
-    for (; i < size - 1; i++) {
-        char c = getChar();
-        if (c == '\n') {
-            break;
-        }
-        str[i] = c;
-    }
-    str[i] = 0;
+    while (syscall(SYS_READ, STD_STR, (uint32_t)str, size, 0, 0) == -1);
 }
 
 int dec2Str(int decimal, char *buffer, int size, int count);
@@ -98,21 +90,20 @@ void printf(const char *format,...){
             i++;
             switch (format[i]) {
                 case 'd':
-                    decimal = ((int*)paraList)[index++];
+                    decimal = *((int *)(paraList + ++index * sizeof(const char *)));
                     count = dec2Str(decimal, buffer, MAX_BUFFER_SIZE, --count);
                     break;
                 case 'x':
-                    hexadecimal = ((uint32_t*)paraList)[index++];
+                    hexadecimal = *((uint32_t *)(paraList + ++index * sizeof(const char *)));
                     count = hex2Str(hexadecimal, buffer, MAX_BUFFER_SIZE, --count);
                     break;
                 case 's':
-                    string = ((char**)paraList)[index++];
+                    string = *((char **)(paraList + ++index * sizeof(const char *)));
                     count = str2Str(string, buffer, MAX_BUFFER_SIZE, --count);
                     break;
                 case 'c':
-                    character = ((char*)paraList)[index++];
-                    buffer[--count] = character;
-                    count++;
+                    character = *((char *)(paraList + ++index * sizeof(const char *)));
+                    buffer[count - 1] = character;
                     break;
                 default:
                     buffer[count++] = format[i];

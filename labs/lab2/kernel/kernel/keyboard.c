@@ -92,7 +92,7 @@
 
 #define KEYTABLE_SIZE (KF12_P+1)
 
-uint32_t keyBuffer[MAX_KEYBUFFER_SIZE];
+char keyBuffer[MAX_KEYBUFFER_SIZE];
 int bufferHead;
 int bufferTail;
 
