@@ -101,13 +101,13 @@ void KeyboardHandle(struct TrapFrame *tf){
         if (c == 0) {
             return;
         }
-        displayCharacter(c, displayRow, displayCol);
         updateNewCharacter();
         keyBuffer[bufferHead] = c;
         bufferHead = (bufferHead + 1) % MAX_KEYBUFFER_SIZE;
         if (bufferHead == bufferTail) {
             bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
         }
+        displayCharacter(c, displayRow, displayCol);
 	}
 	updateCursor(displayRow, displayCol);
 }
@@ -169,17 +169,40 @@ void syscallRead(struct TrapFrame *tf){
 
 void syscallGetChar(struct TrapFrame *tf){
 	// TODO: 自由实现
-    if (bufferHead == bufferTail) {
-        tf->eax = -1;
-    } else {
-        int sel = USEL(SEG_UDATA);
-        char *c = (char*)tf->edx;
-        asm volatile("movw %0, %%es"::"m"(sel));
-        asm volatile("movb %0, %%es:(%1)"::"r"(keyBuffer[bufferTail]), "r"(c));
-        keyBuffer[bufferTail] = 0;
-        bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
-        tf->eax = 0;
+    int sel = USEL(SEG_UDATA);
+    char *str = (char*)tf->edx;
+    int i = 0;
+    char character = 0;
+    int isEnd = 0;
+    asm volatile("movw %0, %%es"::"m"(sel));
+    while (i < MAX_KEYBUFFER_SIZE) {
+        if (bufferHead == bufferTail) {
+            break;
+        }
+        character = keyBuffer[(bufferTail + i) % MAX_KEYBUFFER_SIZE];
+        if (character == '\n') {
+            if (i == 0) {
+                asm volatile("movb %0, %%es:(%1)"::"r"(character), "r"(str + i));
+            }
+            keyBuffer[bufferTail] = 0;
+            bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
+            if (bufferTail == bufferHead - 1) {
+                keyBuffer[bufferTail] = 0;
+                bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
+            }
+            isEnd = 1;
+            break;
+        }
+        if (character != 0) {
+            if (i == 0) {
+                asm volatile("movb %0, %%es:(%1)"::"r"(character), "r"(str + i));
+            }
+            i++;
+        } else {
+            break;
+        }
     }
+    tf->eax = isEnd ? i : -1;
 }
 
 void syscallGetStr(struct TrapFrame *tf){
@@ -195,7 +218,7 @@ void syscallGetStr(struct TrapFrame *tf){
         if (bufferHead == bufferTail) {
             break;
         }
-        character = keyBuffer[bufferTail + i];
+        character = keyBuffer[(bufferTail + i) % MAX_KEYBUFFER_SIZE];
         if (character == '\n') {
             while (bufferTail != bufferHead) {
                 keyBuffer[bufferTail] = 0;
