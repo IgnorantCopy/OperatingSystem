@@ -80,8 +80,8 @@ void KeyboardHandle(struct TrapFrame *tf){
         if (displayCol > 0 && bufferHead != bufferTail) {
             keyBuffer[bufferHead] = 0;
             bufferHead = (bufferHead - 1 + MAX_KEYBUFFER_SIZE) % MAX_KEYBUFFER_SIZE;
-            displayCharacter(0, displayRow, displayCol);
             displayCol--;
+            displayCharacter(0, displayRow, displayCol);
         } else if (displayCol == 0 && bufferHead != bufferTail) {
             keyBuffer[bufferHead] = 0;
             bufferHead = (bufferHead - 1 + MAX_KEYBUFFER_SIZE) % MAX_KEYBUFFER_SIZE;
@@ -101,13 +101,13 @@ void KeyboardHandle(struct TrapFrame *tf){
         if (c == 0) {
             return;
         }
+        displayCharacter(c, displayRow, displayCol);
         updateNewCharacter();
         keyBuffer[bufferHead] = c;
         bufferHead = (bufferHead + 1) % MAX_KEYBUFFER_SIZE;
         if (bufferHead == bufferTail) {
             bufferTail = (bufferTail + 1) % MAX_KEYBUFFER_SIZE;
         }
-        displayCharacter(c, displayRow, displayCol);
 	}
 	updateCursor(displayRow, displayCol);
 }
@@ -148,8 +148,8 @@ void syscallPrint(struct TrapFrame *tf) {
         if (character == '\n') {
             updateNewLine();
         } else {
-            updateNewCharacter();
             displayCharacter(character, displayRow, displayCol);
+            updateNewCharacter();
         }
     }
 	updateCursor(displayRow, displayCol);
