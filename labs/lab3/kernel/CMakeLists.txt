@@ -1,0 +1,12 @@
+add_executable(lab3_kernel_main main.c)
+add_executable(lab3_kernel_lib_abort lib/abort.c)
+add_executable(lab3_kernel_disk kernel/disk.c)
+add_executable(lab3_kernel_i8259 kernel/i8259.c)
+add_executable(lab3_kernel_idt kernel/idt.c)
+add_executable(lab3_kernel_irqHandle kernel/irqHandle.c)
+add_executable(lab3_kernel_kvm kernel/kvm.c)
+add_executable(lab3_kernel_serial kernel/serial.c)
+add_executable(lab3_kernel_timer kernel/timer.c)
+add_executable(lab3_kernel_vga kernel/vga.c)
+
+include_directories(include)

@@ -1,0 +1,1 @@
+add_executable(lab3_lib syscall.c types.h lib.h)
