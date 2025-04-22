@@ -1,0 +1,6 @@
+add_executable(t0 t0.c)
+add_executable(t1 t1.c)
+add_executable(t2 t2.c)
+add_executable(t3 t3.c)
+add_executable(createJoin createJoin.c)
+add_executable(cond cond.c)
