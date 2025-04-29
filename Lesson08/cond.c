@@ -7,14 +7,14 @@
 #include <pthread.h>
 #include <unistd.h>
 
-int ready = 0;
+bool ready = false;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
 void *thread1(void *arg) {
     printf("Thread 1 is waiting...\n");
     pthread_mutex_lock(&lock);
-    while (ready == 0) {
+    while (!ready) {
         pthread_cond_wait(&cond, &lock);
     }
     pthread_mutex_unlock(&lock);
@@ -24,7 +24,7 @@ void *thread1(void *arg) {
 void *thread2(void *arg) {
     printf("Thread 2 is signaling...\n");
     pthread_mutex_lock(&lock);
-    ready = 1;
+    ready = true;
     pthread_cond_signal(&cond);
     pthread_mutex_unlock(&lock);
     return NULL;

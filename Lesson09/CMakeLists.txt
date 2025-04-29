@@ -1,0 +1,3 @@
+add_executable(producerConsumerRace producerConsumerRace.c)
+add_executable(producerConsumerTAS producerConsumerTAS.c)
+add_executable(producerConsumerCAS producerConsumerCAS.c)
