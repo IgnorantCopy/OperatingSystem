@@ -96,19 +96,20 @@ void reader(int i, sem_t write_mutex, sem_t count_mutex) {
 int uEntry(void) {
 	// For lab4.1
 	// Test 'scanf' 
-	// int dec = 0;
-	// int hex = 0;
-	// char str[6];
-	// char cha = 0;
+	int dec = 0;
+	int hex = 0;
+	char str[6];
+	char cha = 0;
 	int ret = 0;
-	// while(1){
-	// 	printf("Input:\" Test %%c Test %%6s %%d %%x\"\n");
-	// 	ret = scanf(" Test %c Test %6s %d %x", &cha, str, &dec, &hex);
-	// 	printf("Ret: %d; %c, %s, %d, %x.\n", ret, cha, str, dec, hex);
-	// 	if (ret == 4) {
-	// 		break;
-	// 	}
-	// }
+	while(1) {
+		printf("Input:\" Test %%c Test %%6s %%d %%x\"\n");
+		ret = scanf(" Test %c Test %6s %d %x", &cha, str, &dec, &hex);
+		printf("Ret: %d; %c, %s, %d, %x.\n", ret, cha, str, dec, hex);
+		if (ret == 4) {
+			break;
+		}
+	}
+	exit();
 
 	// For lab4.2
 	// Test 'Semaphore'
@@ -191,8 +192,8 @@ int uEntry(void) {
 	// 	printf("Full Mutex Initializing Failed.\n");
 	// 	exit();
 	// }
-	// int num_producers = 4;
-	// int num_consumers = 1;
+	// constexpr int num_producers = 4;
+	// constexpr int num_consumers = 1;
 	// for (int j = 0; j < num_producers; j++) {
 	// 	ret = fork();
 	// 	if (ret == 0) {
@@ -214,36 +215,36 @@ int uEntry(void) {
 
 	// For lab4.5
 	// reader-writer problem
-	sem_t write_mutex;
-	sem_t count_mutex;
-	ret = sem_init(&write_mutex, 1);
-	if (ret == -1) {
-		printf("Writer Mutex Initializing Failed.\n");
-		exit();
-	}
-	ret = sem_init(&count_mutex, 1);
-	if (ret == -1) {
-		printf("Reader Count Mutex Initializing Failed.\n");
-		exit();
-	}
-	int num_writers = 3;
-	int num_readers = 3;
-	for (int j = 0; j < num_writers; j++) {
-		ret = fork();
-		if (ret == 0) {
-			writer(j, write_mutex);
-			exit();
-		}
-	}
-	for (int j = 0; j < num_readers; j++) {
-		ret = fork();
-		if (ret == 0) {
-			reader(j, write_mutex, count_mutex);
-			exit();
-		}
-	}
-	while (1);
-	sem_destroy(&write_mutex);
-	sem_destroy(&count_mutex);
+	// sem_t write_mutex;
+	// sem_t count_mutex;
+	// ret = sem_init(&write_mutex, 1);
+	// if (ret == -1) {
+	// 	printf("Writer Mutex Initializing Failed.\n");
+	// 	exit();
+	// }
+	// ret = sem_init(&count_mutex, 1);
+	// if (ret == -1) {
+	// 	printf("Reader Count Mutex Initializing Failed.\n");
+	// 	exit();
+	// }
+	// constexpr int num_writers = 3;
+	// constexpr int num_readers = 3;
+	// for (int j = 0; j < num_writers; j++) {
+	// 	ret = fork();
+	// 	if (ret == 0) {
+	// 		writer(j, write_mutex);
+	// 		exit();
+	// 	}
+	// }
+	// for (int j = 0; j < num_readers; j++) {
+	// 	ret = fork();
+	// 	if (ret == 0) {
+	// 		reader(j, write_mutex, count_mutex);
+	// 		exit();
+	// 	}
+	// }
+	// while (1);
+	// sem_destroy(&write_mutex);
+	// sem_destroy(&count_mutex);
 	return 0;
 }

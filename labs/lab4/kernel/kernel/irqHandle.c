@@ -147,7 +147,7 @@ void timerHandle(struct StackFrame *sf) {
 
 void keyboardHandle(struct StackFrame *sf) {
 	ProcessTable *pt = NULL;
-	uint32_t keyCode = getKeyCode();
+	const uint32_t keyCode = getKeyCode();
 	if (keyCode == 0) // illegal keyCode
 		return;
 	putChar(getChar(keyCode));
