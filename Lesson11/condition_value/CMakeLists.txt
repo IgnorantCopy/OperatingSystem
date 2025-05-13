@@ -1,0 +1,5 @@
+add_executable(spin spin.c)
+add_executable(condition cond.c)
+add_executable(procon1 procon1.c)
+add_executable(procon2 procon2.c)
+add_executable(overwrite overwrite.c)
