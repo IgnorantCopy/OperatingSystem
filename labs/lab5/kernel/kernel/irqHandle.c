@@ -397,7 +397,7 @@ void syscallWriteFile(struct StackFrame *sf) {
 		pcb[current].regs.eax = -1;
 		return;
 	}
-	diskRead((void*)&sBlock, sizeof(SuperBlock), 1, 0);
+	diskRead(&sBlock, sizeof(SuperBlock), 1, 0);
 
 	for (i = 0, j = remainder; i < size;) {
 		if (quotient >= inode.blockCount) {
@@ -508,7 +508,7 @@ void syscallReadFile(struct StackFrame *sf) {
 	diskRead(&inode, sizeof(Inode), 1, file[sf->ecx - MAX_DEV_NUM].inodeOffset);
 	
 	// TODO: Complete the process of read to a file.
-	if (inode.size <= file[sf->ecx - MAX_DEV_NUM].offset) {
+	if (file[sf->ecx - MAX_DEV_NUM].offset >= inode.size) {
 		pcb[current].regs.eax = -1;
 		return;
 	}
@@ -519,7 +519,7 @@ void syscallReadFile(struct StackFrame *sf) {
 		pcb[current].regs.eax = 0;
 		return;
 	}
-	diskRead((void*)&sBlock, sizeof(SuperBlock), 1, 0);
+	diskRead(&sBlock, sizeof(SuperBlock), 1, 0);
 	for (i = 0, j = remainder; i < size;) {
 		if (quotient >= inode.blockCount) {
 			break;
@@ -600,7 +600,7 @@ void syscallClose(struct StackFrame *sf) {
 }
 
 void syscallRemove(struct StackFrame *sf) {
-	// int i;
+	int i;
 	// char tmp = 0;
 	// int length = 0;
 	// int cond = 0;
@@ -617,6 +617,17 @@ void syscallRemove(struct StackFrame *sf) {
 
 	if (ret == 0) { // file exist
 		// TODO: You need to consider the situations that the file refer to a device or a file in use.
+		int16_t type = destInode.type;
+		if (type == UNKNOWN_TYPE || type == FIFO_TYPE || type == SOCKET_TYPE) {
+			pcb[current].regs.eax = -1;
+			return;
+		}
+		for (i = 0; i < MAX_FILE_NUM; i++) {
+			if (file[i].state == 1 && file[i].inodeOffset == destInodeOffset) {
+				pcb[current].regs.eax = -1;
+				return;
+			}
+		}
 		if (str[stringLen(str) - 1] == '/') {
 			str[stringLen(str) - 1] = 0;
 		}
@@ -638,7 +649,7 @@ void syscallRemove(struct StackFrame *sf) {
 			return;
 		}
 		// free inode
-		ret = freeInode(&sBlock, gDesc, &fatherInode, fatherInodeOffset, &destInode, &destInodeOffset, str + size + 1, destInode.type);
+		ret = freeInode(&sBlock, gDesc, &fatherInode, fatherInodeOffset, &destInode, &destInodeOffset, str + size + 1, type);
 		if (ret == -1) {
 			pcb[current].regs.eax = -1;
 			return;
